@@ -1,16 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <rss version="2.0">
   <channel>
     <title>Vocaloid Pack: Extended Edition</title>
     <link>https://gamebanana.com/mods/723287</link>
     <description>Actualizaciones de Vocaloid Pack: Extended Edition</description>
     <language>es</language>
-
     <item>
       <title>Vocaloid Pack: Extended Edition</title>
       <link>https://gamebanana.com/mods/723287</link>
-      <guid isPermaLink="true">https://gamebanana.com/mods/723287</guid>
-      <description>Actualización del mod en GameBanana.</description>
+      <guid isPermaLink="false">gamebanana-723287-1791141569</guid>
+      <description>Nueva actualización de Vocaloid Pack: Extended Edition.</description>
+      <pubDate>Mon, 05 Oct 2026 01:05:22 GMT</pubDate>
     </item>
   </channel>
 </rss>
