@@ -1,0 +1,87 @@
+name: Actualizar RSS de GameBanana
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v6
+
+      - name: Comprobar actualización
+        env:
+          API_URL: "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=723287&fields=name,udate,description&return_keys=true&format=json"
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+          import xml.etree.ElementTree as ET
+          from email.utils import formatdate
+
+          req = urllib.request.Request(
+              os.environ["API_URL"],
+              headers={"User-Agent": "Mozilla/5.0"}
+          )
+
+          with urllib.request.urlopen(req) as r:
+              data = json.load(r)
+
+          print("Datos recibidos:", data)
+
+          with open("rss.xml", "rb") as f:
+              old_xml = f.read()
+
+          root = ET.fromstring(old_xml)
+          channel = root.find("channel")
+
+          if channel is None:
+              raise Exception("No se encontró channel en rss.xml")
+
+          item = channel.find("item")
+
+          if item is None:
+              item = ET.SubElement(channel, "item")
+
+          def set_value(name, value):
+              element = item.find(name)
+              if element is None:
+                  element = ET.SubElement(item, name)
+              element.text = str(value)
+
+          name = data.get("name", "Vocaloid Pack: Extended Edition")
+          udate = data.get("udate", "")
+
+          set_value("title", name)
+          set_value("link", "https://gamebanana.com/mods/723287")
+          set_value("guid", f"gamebanana-723287-{udate}")
+          set_value("description", "Nueva actualización de Vocaloid Pack: Extended Edition.")
+          set_value("pubDate", formatdate(usegmt=True))
+
+          guid = item.find("guid")
+          guid.set("isPermaLink", "false")
+
+          ET.indent(root, space="  ")
+
+          ET.ElementTree(root).write(
+              "rss.xml",
+              encoding="utf-8",
+              xml_declaration=True
+          )
+          PY
+
+      - name: Guardar cambios
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rss.xml
+          git diff --cached --quiet || git commit -m "Actualizar RSS"
+          git push
