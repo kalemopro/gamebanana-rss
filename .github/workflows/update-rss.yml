@@ -2,7 +2,7 @@ name: Actualizar RSS de GameBanana
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/6 * * * *"
   workflow_dispatch:
 
 permissions:
