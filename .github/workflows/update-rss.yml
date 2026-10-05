@@ -16,72 +16,74 @@ jobs:
       - name: Descargar repositorio
         uses: actions/checkout@v6
 
-      - name: Comprobar actualización
-        env:
-          API_URL: "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=723287&fields=name,udate,description&return_keys=true&format=json"
+      - name: Consultar GameBanana
         run: |
           python - <<'PY'
           import json
-          import os
           import urllib.request
           import xml.etree.ElementTree as ET
           from email.utils import formatdate
 
-          req = urllib.request.Request(
-              os.environ["API_URL"],
+          api = "https://api.gamebanana.com/Core/Item/Data?itemtype=Mod&itemid=723287&fields=name,udate&return_keys=true&format=json"
+
+          request = urllib.request.Request(
+              api,
               headers={"User-Agent": "Mozilla/5.0"}
           )
 
-          with urllib.request.urlopen(req) as r:
-              data = json.load(r)
+          with urllib.request.urlopen(request, timeout=30) as response:
+              data = json.load(response)
 
-          print("Datos recibidos:", data)
+          print("Respuesta de GameBanana:")
+          print(data)
 
-          with open("rss.xml", "rb") as f:
-              old_xml = f.read()
+          name = data.get("name", "Vocaloid Pack: Extended Edition")
+          update_id = str(data.get("udate", ""))
 
-          root = ET.fromstring(old_xml)
+          tree = ET.parse("rss.xml")
+          root = tree.getroot()
           channel = root.find("channel")
-
-          if channel is None:
-              raise Exception("No se encontró channel en rss.xml")
 
           item = channel.find("item")
 
           if item is None:
               item = ET.SubElement(channel, "item")
 
-          def set_value(name, value):
-              element = item.find(name)
+          def set_text(tag, value):
+              element = item.find(tag)
               if element is None:
-                  element = ET.SubElement(item, name)
-              element.text = str(value)
+                  element = ET.SubElement(item, tag)
+              element.text = value
 
-          name = data.get("name", "Vocaloid Pack: Extended Edition")
-          udate = data.get("udate", "")
-
-          set_value("title", name)
-          set_value("link", "https://gamebanana.com/mods/723287")
-          set_value("guid", f"gamebanana-723287-{udate}")
-          set_value("description", "Nueva actualización de Vocaloid Pack: Extended Edition.")
-          set_value("pubDate", formatdate(usegmt=True))
+          set_text("title", name)
+          set_text("link", "https://gamebanana.com/mods/723287")
+          set_text("description", "Nueva actualización de Vocaloid Pack: Extended Edition.")
+          set_text("guid", "gamebanana-723287-" + update_id)
 
           guid = item.find("guid")
           guid.set("isPermaLink", "false")
 
+          set_text("pubDate", formatdate(usegmt=True))
+
           ET.indent(root, space="  ")
 
-          ET.ElementTree(root).write(
+          tree.write(
               "rss.xml",
               encoding="utf-8",
               xml_declaration=True
           )
           PY
 
-      - name: Guardar cambios
+      - name: Guardar RSS
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git add rss.xml
-          git diff --cached --quiet || git commit -m "Actualizar RSS"
-          git push
+
+          if git diff --cached --quiet; then
+            echo "No hay cambios."
+          else
+            git commit -m "Actualizar RSS"
+            git push
+          fi
